@@ -4,6 +4,7 @@ from functools import wraps
 from datetime import datetime
 app=Flask(__name__)
 app.secret_key="saksham-final-123"
+ADMIN_PIN=os.environ.get("ADMIN_PIN","7788")
 SELL_PRICE={"1 Hours":16,"3 Hours":35,"6 Hours":65,"12 Hours":120}
 PRODUCTS={"133":{"name":"AIM HACK"},"149":{"name":"XRAG HACK"}}
 DURATIONS=["1 Hours","3 Hours","6 Hours","12 Hours"]
@@ -75,14 +76,25 @@ def generate():
  c.execute("INSERT INTO history (user_id,product_name,duration,price,key_text,created_at) VALUES (?,?,?,?,?,?)",(u['id'],PRODUCTS[p]['name'],d,price,key,datetime.now().strftime("%d-%m %H:%M")))
  c.commit();nb=c.execute("SELECT balance FROM users WHERE id=?",(u['id'],)).fetchone()['balance'];c.close()
  return jsonify({"key":key,"price":price,"new_balance":nb})
-@app.get("/admin")
+@app.route("/admin",methods=["GET","POST"])
 def admin_panel():
- if not session.get('is_admin'): return "Admin only",403
+ if request.method=="POST" and 'pin' in request.form:
+  if request.form['pin']==ADMIN_PIN:
+   session['admin_ok']=True
+   return redirect('/admin')
+  flash("Wrong PIN")
+  return render_template("admin_login.html")
+ if not session.get('admin_ok'):
+  return render_template("admin_login.html")
  c=get_db();us=c.execute("SELECT * FROM users").fetchall();hs=c.execute("SELECT h.*,u.username FROM history h LEFT JOIN users u ON h.user_id=u.id ORDER BY h.id DESC LIMIT 100").fetchall();c.close()
  return render_template("admin.html",users=us,histories=hs)
+@app.get("/admin/logout")
+def admin_logout():
+ session.pop('admin_ok',None)
+ return redirect('/admin')
 @app.post("/admin/add_balance")
 def add_balance():
- if not session.get('is_admin'): return "Admin only",403
+ if not session.get('admin_ok'): return "Admin only",403
  try:amt=float(request.form['amount'])
  except:flash("Invalid amount");return redirect('/admin')
  c=get_db();c.execute("UPDATE users SET balance=balance+? WHERE username=?",(amt,request.form['username']));c.commit();c.close()
@@ -90,12 +102,12 @@ def add_balance():
  return redirect('/admin')
 @app.post("/admin/delete_user")
 def delete_user():
- if not session.get('is_admin'): return "Admin only",403
+ if not session.get('admin_ok'): return "Admin only",403
  c=get_db();c.execute("DELETE FROM users WHERE username=? AND is_admin=0",(request.form['username'],));c.commit();c.close()
  return redirect('/admin')
 @app.post("/admin/add_user")
 def add_user():
- if not session.get('is_admin'): return "Admin only",403
+ if not session.get('admin_ok'): return "Admin only",403
  c=get_db()
  try:c.execute("INSERT INTO users (username,password,balance) VALUES (?,?,0)",(request.form['username'],request.form['password']));c.commit()
  except:pass

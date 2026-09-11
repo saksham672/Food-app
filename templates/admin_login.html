@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0f0f0f;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+.card{background:#1e1e1e;padding:25px;border-radius:15px;width:320px;box-shadow:0 0 20px #000}
+input{padding:15px;width:100%;margin:8px 0;border-radius:10px;border:none;background:#2a2a2a;color:#fff;box-sizing:border-box;font-size:22px;text-align:center;letter-spacing:8px}
+button{padding:13px;background:#00ff88;border:none;width:100%;border-radius:10px;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
+a{color:#00ff88;text-decoration:none;font-weight:bold}
+h2{text-align:center}
+.msg{color:orange;text-align:center;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Admin PIN</h2>
+<form method="POST">
+<input name="pin" type="password" inputmode="numeric" placeholder="PIN" autofocus required>
+<button>Open Panel</button>
+</form>
+<p class="msg">{{ get_flashed_messages()[0] if get_flashed_messages() else '' }}</p>
+<p style="text-align:center"><a href="/">Back to Home</a></p>
+</div>
+</body>
+</html>
