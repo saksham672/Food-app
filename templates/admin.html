@@ -1,1 +1,208 @@
-<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width"><style>body{background:#111;color:#fff;font-family:sans-serif;padding:15px}input,button{padding:8px;margin:3px;border-radius:5px;border:none}button{background:#00ff88;font-weight:bold}.card{background:#222;padding:10px;border-radius:8px;margin:10px 0}</style></head><body><h2>Admin Panel - <a href="/" style="color:#0f8">Home</a> | <a href="/logout" style="color:red">Logout</a></h2><div class="card"><h3>Add User</h3><form action="/admin/add_user" method="post"><input name="username" placeholder="New Username" required><input name="password" placeholder="Password" required><button>Create</button></form></div><div class="card"><h3>Add Balance</h3><form action="/admin/add_balance" method="post"><input name="username" placeholder="Username" required><input name="amount" placeholder="16 / 35 / 65" required><button>Add Balance</button></form></div><div class="card"><h3>All Users</h3>{% for u in users %}<p>{{u['username']}} - {{u['balance']}} Rs {% if u['is_admin'] %}(ADMIN){% endif %}</p>{% endfor %}</div><div class="card"><h3>History</h3>{% for h in histories %}<p>{{h['username']}} | {{h['duration']}} | {{h['price']}}Rs | {{h['key_text']}}</p>{% endfor %}</div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel</title>
+<style>
+  :root{
+    --bg:#0b0f0d;
+    --card:#151a17;
+    --card2:#1d241f;
+    --border:#2a332c;
+    --green:#00ff88;
+    --red:#ff4d4d;
+    --text:#f3f5f4;
+    --muted:#8b968f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:16px;
+    max-width:640px;
+    margin:0 auto;
+    line-height:1.5;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .topbar h1{font-size:18px;font-weight:700}
+  .topbar .links{display:flex;gap:14px;font-size:14px}
+  .topbar a{text-decoration:none;font-weight:600}
+  .topbar a.home{color:var(--green)}
+  .topbar a.logout{color:var(--red)}
+  .section-title{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+    margin:22px 4px 10px;
+    font-weight:700;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:12px;
+  }
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--card2);
+    color:var(--text);
+    font-size:15px;
+    margin-bottom:12px;
+  }
+  input:focus{outline:none;border-color:var(--green)}
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    font-weight:700;
+    font-size:15px;
+    padding:12px 16px;
+    background:var(--green);
+    color:#04160d;
+    width:100%;
+  }
+  button:active{transform:scale(.98)}
+  .user-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .user-info{min-width:0}
+  .user-name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px}
+  .badge{
+    font-size:10px;
+    background:var(--green);
+    color:#04160d;
+    padding:2px 6px;
+    border-radius:6px;
+    font-weight:700;
+  }
+  .user-bal{color:var(--green);font-size:14px;font-weight:700;margin-top:2px}
+  .quick-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .quick-add form{display:inline}
+  .chip{
+    background:var(--card);
+    border:1px solid var(--green);
+    color:var(--green);
+    padding:7px 12px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:700;
+    width:auto;
+  }
+  .custom-add{display:flex;gap:6px;margin-top:8px}
+  .custom-add input{margin-bottom:0;flex:1}
+  .custom-add button{width:auto;padding:10px 14px}
+  .del-btn{
+    background:transparent;
+    border:1px solid var(--red);
+    color:var(--red);
+    width:auto;
+    padding:9px 12px;
+    font-size:13px;
+    flex-shrink:0;
+  }
+  .hist-item{
+    font-size:13px;
+    color:var(--muted);
+    padding:8px 0;
+    border-bottom:1px solid var(--border);
+    word-break:break-word;
+  }
+  .hist-item:last-child{border-bottom:none}
+  .hist-item b{color:var(--text)}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:10px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Admin Panel</h1>
+    <div class="links">
+      <a class="home" href="/">Home</a>
+      <a class="logout" href="/logout">Logout</a>
+    </div>
+  </div>
+
+  <div class="section-title">Add New User</div>
+  <div class="card">
+    <form action="/admin/add_user" method="post">
+      <label>Username</label>
+      <input name="username" placeholder="New username" required>
+      <label>Password</label>
+      <input name="password" placeholder="Password" required>
+      <button>Create User</button>
+    </form>
+  </div>
+
+  <div class="section-title">Users &amp; Balance</div>
+  <div class="card">
+    {% for u in users %}
+      <div class="user-row" style="flex-wrap:wrap">
+        <div class="user-info">
+          <div class="user-name">{{u['username']}}{% if u['is_admin'] %}<span class="badge">ADMIN</span>{% endif %}</div>
+          <div class="user-bal">{{u['balance']}} Rs</div>
+        </div>
+        {% if not u['is_admin'] %}
+        <form action="/admin/delete_user" method="post" onsubmit="return confirm('Delete {{u['username']}}?')">
+          <input type="hidden" name="username" value="{{u['username']}}">
+          <button class="del-btn">Delete</button>
+        </form>
+        {% endif %}
+        {% if not u['is_admin'] %}
+        <div style="width:100%">
+          <div class="quick-add">
+            {% for amt in [16,35,65,120] %}
+            <form action="/admin/add_balance" method="post">
+              <input type="hidden" name="username" value="{{u['username']}}">
+              <input type="hidden" name="amount" value="{{amt}}">
+              <button class="chip">+{{amt}}</button>
+            </form>
+            {% endfor %}
+          </div>
+          <form action="/admin/add_balance" method="post" class="custom-add">
+            <input type="hidden" name="username" value="{{u['username']}}">
+            <input name="amount" type="number" step="any" placeholder="Custom amount" required>
+            <button>Add</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="empty">No users yet</div>
+    {% endfor %}
+  </div>
+
+  <div class="section-title">Recent History</div>
+  <div class="card">
+    {% for h in histories %}
+      <div class="hist-item"><b>{{h['username']}}</b> | {{h['duration']}} | {{h['price']}} Rs<br>{{h['key_text']}}</div>
+    {% else %}
+      <div class="empty">No history</div>
+    {% endfor %}
+  </div>
+</body>
+</html>
