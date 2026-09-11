@@ -1,1 +1,26 @@
-<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:15px}.box{background:#1a1a1a;padding:20px;border-radius:15px;max-width:450px;margin:auto}select,button{width:100%;padding:14px;margin:8px 0;border-radius:10px;border:none;font-size:16px}select{background:#2a2a2a;color:#fff}button{background:#00ff88;font-weight:bold}.keybox{background:#000;padding:15px;border-radius:10px;margin-top:15px;word-break:break-all;border:1px solid #00ff88;display:none}.wallet{background:#222;padding:12px;border-radius:10px;margin-bottom:15px;display:flex;justify-content:space-between}table{width:100%;margin-top:15px;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #333;text-align:left}</style></head><body><div class="box"><div class="wallet"><span>Hi {{user['username']}}</span><span><b id="bal">{{user['balance']}} Rs</b> | <a href="/logout" style="color:#ff4444">Logout</a></span></div><h3>Generate - 16/35/65/120</h3><select id="product">{% for pid,p in products.items() %}<option value="{{pid}}">{{p.name}}</option>{% endfor %}</select><select id="duration">{% for d in durations %}<option value="{{d}}">{{d}} - {{sell_price[d]}} Rs</option>{% endfor %}</select><button onclick="gen()">Generate Key</button><div id="result" class="keybox"></div><h4 style="margin-top:20px">My History</h4><table><tr><th>Product</th><th>Key</th><th>Time</th></tr>{% for h in histories %}<tr><td>{{h['product_name']}}</td><td style="font-size:11px">{{h['key_text']}}</td><td>{{h['created_at']}}</td></tr>{% else %}<tr><td colspan="3" style="text-align:center;color:#888">No keys</td></tr>{% endfor %}</table>{% if session.get('is_admin') %}<p style="text-align:center"><a href="/admin" style="color:#00ff88">Admin Panel</a></p>{% endif %}</div><script>function gen(){let b=document.querySelector("button");b.innerText="Generating...";fetch("/generate",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`product_id=${document.getElementById('product').value}&duration=${document.getElementById('duration').value}`}).then(r=>r.json().then(j=>({s:r.status,j}))).then(d=>{b.innerText="Generate Key";let r=document.getElementById("result");r.style.display="block";if(d.s!=200){r.innerHTML="❌ "+d.j.error;r.style.borderColor="red"}else{r.innerHTML="✅ <b style='color:#00ff88'>"+d.j.key+"</b><br>New Bal: "+d.j.new_balance;document.getElementById("bal").innerText=d.j.new_balance+" Rs";setTimeout(()=>location.reload(),1500)}})}</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" contenh, initial-scale=1">
+<title>SAKSHAM STORE</title>
+<style>
+body{margin:0;background:#060a0f;color:#fff;font-family:Arial;text-align:center}
+.top{padding:30px 0 10px}
+.top h1{color:#00f2ff;letter-spacing:3px;margin:0;text-shadow:0 0 10px #00f2ff}
+.top p{color:#aaa;font-size:12px}
+.container{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;padding:20px}
+.card{background:#0e1822;border:1px solid #00f2ff33;border-radius:15px;padding:18px;width:300px;box-shadow:0 0 20px #00f2ff1a}
+.card h3{font-size:13px;line-height:18px;margin:10px 0 15px}
+small{color:#888;font-size:11px}
+select{width:100%;padding:10px;background:#0a121b;border:1px solid #1e2f40;color:#fff;border-radius:8px;margin:8px 0}
+.buy{width:100%;padding:12px;background:#00ff8a;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px;box-shadow:0 0 15px #00ff8a80}
+#result{margin:20px auto;max-width:600px;background:#0e1822;padding:15px;border-radius:10px;display:none;word-break:break-all;border:1px solid #00ff8a}
+</style>
+</head>
+<body>
+<div class="top"><h1>SAKSHAM STORE</h1><p>Fast Secure Digital Delivery</p></div>
+<div class="container">
+<div class="card">
+<h3>AIM HACK FF ROOT+NONROOT+IOS<br>IPHONE+PC</h3>
+<small>Select your required duration</small>
+<select id="d1"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>
