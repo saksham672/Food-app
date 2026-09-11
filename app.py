@@ -13,7 +13,7 @@ PRODUCTS = {
     "149": {"name": "XRAG FF ROOT+NONROOT+IOS IPHONE+PC"},
 }
 
-DURATIONS = ["1 Hour", "3 Hours", "6 Hours", "12 Hours", "1 Day", "3 Days", "7 Days"]
+DURATIONS = ["1 Hours", "3 Hours", "6 Hours", "12 Hours", "1 Day", "3 Days", "7 Days"]
 
 @app.get("/")
 def home():
