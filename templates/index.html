@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saksham Store</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#05070b;color:#eafcff;font-family:Arial,sans-serif}
+.wrap{max-width:900px;margin:auto;padding:28px 16px}.hero{text-align:center;padding:30px 10px}
+.logo{font-size:34px;font-weight:900;letter-spacing:2px;color:#62eaff;text-shadow:0 0 20px #159bb0}
+.sub{color:#8faab2;margin-top:8px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.card{background:linear-gradient(145deg,#0b1118,#071018);border:1px solid #123c48;border-radius:20px;padding:22px;box-shadow:0 0 25px #021a22}
+.badge{display:inline-block;padding:6px 10px;border-radius:20px;background:#082d25;color:#54ffb0;font-size:12px;font-weight:bold}
+h2{font-size:20px;margin:16px 0 8px}.muted{color:#8ca1a8;font-size:13px}
+select,input{width:100%;margin-top:14px;padding:13px;border-radius:12px;border:1px solid #204957;background:#07131a;color:white}
+button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:#27e6a2;color:#00130d;font-weight:900;font-size:15px;cursor:pointer}
+button:hover{filter:brightness(1.08)}#result{display:none;margin-top:20px;padding:18px;border-radius:16px;border:1px solid #1c5361;background:#07151b;white-space:pre-wrap;overflow:auto}
+.note{text-align:center;color:#657b82;font-size:12px;margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="logo">SAKSHAM STORE</div>
+    <div class="sub">Fast • Secure • Digital Delivery</div>
+  </section>
+
+  <div class="grid">
+  {% for pid,p in products.items() %}
+    <div class="card">
+      <span class="badge">PID {{ pid }}</span>
+      <h2>{{ p.name }}</h2>
+      <div class="muted">Select your required duration</div>
+      <select id="d{{pid}}">
+        {% for d in durations %}<option>{{d}}</option>{% endfor %}
+      </select>
+      <input id="a{{pid}}" placeholder="Android ID (only if required)">
+      <button onclick="buy('{{pid}}')">BUY NOW</button>
+    </div>
+  {% endfor %}
+  </div>
+
+  <div id="result"></div>
+  <div class="note">Only use products/services you are authorized to resell.</div>
+</div>
+<script>
+async function buy(pid){
+  const result=document.getElementById("result");
+  result.style.display="block"; result.textContent="Processing order...";
+  try{
+    const r=await fetch("/buy",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({product_id:pid,duration:document.getElementById("d"+pid).value,
+                            android_id:document.getElementById("a"+pid).value})});
+    const x=await r.json();
+    result.textContent=x.ok ? "ORDER RESPONSE\n\n"+JSON.stringify(x.response,null,2)
+                            : "ERROR\n\n"+(x.error||JSON.stringify(x.response||x,null,2));
+  }catch(e){result.textContent="Connection error. Please try again."}
+}
+</script>
+</body>
+</html>
