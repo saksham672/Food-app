@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, flash, jsonify
-import sqlite3, os, random, string
+import os, random, string
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from functools import wraps
 from datetime import datetime
 app=Flask(__name__)
@@ -7,19 +9,21 @@ app.secret_key="saksham-final-123"
 SELL_PRICE={"1 Hours":16,"3 Hours":35,"6 Hours":65,"12 Hours":120}
 PRODUCTS={"133":{"name":"AIM HACK"},"149":{"name":"XRAG HACK"}}
 DURATIONS=["1 Hours","3 Hours","6 Hours","12 Hours"]
-DB="/tmp/users.db"
+DB_URL=os.environ.get("DATABASE_URL")
 def get_db():
- c=sqlite3.connect(DB)
- c.row_factory=sqlite3.Row
+ c=psycopg2.connect(DB_URL,cursor_factory=RealDictCursor)
  return c
 def init_db():
  c=get_db()
- c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT, balance REAL DEFAULT 0, is_admin INTEGER DEFAULT 0)")
- c.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY, user_id INTEGER, product_name TEXT, duration TEXT, price REAL, key_text TEXT, created_at TEXT)")
- a=c.execute("SELECT * FROM users WHERE username='admin'").fetchone()
+ cur=c.cursor()
+ cur.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT UNIQUE, password TEXT, balance REAL DEFAULT 0, is_admin INTEGER DEFAULT 0)")
+ cur.execute("CREATE TABLE IF NOT EXISTS history (id SERIAL PRIMARY KEY, user_id INTEGER, product_name TEXT, duration TEXT, price REAL, key_text TEXT, created_at TEXT)")
+ cur.execute("SELECT * FROM users WHERE username='admin'")
+ a=cur.fetchone()
  if not a:
-  c.execute("INSERT INTO users VALUES (NULL,'admin','admin123',999999,1)")
+  cur.execute("INSERT INTO users (username,password,balance,is_admin) VALUES ('admin','admin123',999999,1)")
  c.commit()
+ cur.close()
  c.close()
 init_db()
 def login_required(f):
@@ -31,17 +35,20 @@ def login_required(f):
 @app.get("/")
 @login_required
 def home():
- c=get_db()
- u=c.execute("SELECT * FROM users WHERE id=?",(session['user_id'],)).fetchone()
- h=c.execute("SELECT * FROM history WHERE user_id=? ORDER BY id DESC",(u['id'],)).fetchall()
- c.close()
+ c=get_db();cur=c.cursor()
+ cur.execute("SELECT * FROM users WHERE id=%s",(session['user_id'],))
+ u=cur.fetchone()
+ cur.execute("SELECT * FROM history WHERE user_id=%s ORDER BY id DESC",(u['id'],))
+ h=cur.fetchall()
+ cur.close();c.close()
  return render_template("index.html",products=PRODUCTS,durations=DURATIONS,user=u,sell_price=SELL_PRICE,histories=h)
 @app.route("/login",methods=["GET","POST"])
 def login():
  if request.method=="POST":
-  c=get_db()
-  u=c.execute("SELECT * FROM users WHERE username=? AND password=?",(request.form['username'],request.form['password'])).fetchone()
-  c.close()
+  c=get_db();cur=c.cursor()
+  cur.execute("SELECT * FROM users WHERE username=%s AND password=%s",(request.form['username'],request.form['password']))
+  u=cur.fetchone()
+  cur.close();c.close()
   if u:
    session['user_id']=u['id'];session['username']=u['username'];session['is_admin']=bool(u['is_admin'])
    return redirect('/')
@@ -50,13 +57,13 @@ def login():
 @app.route("/register",methods=["GET","POST"])
 def register():
  if request.method=="POST":
-  c=get_db()
+  c=get_db();cur=c.cursor()
   try:
-   c.execute("INSERT INTO users (username,password,balance) VALUES (?,?,0)",(request.form['username'],request.form['password']))
-   c.commit();c.close()
+   cur.execute("INSERT INTO users (username,password,balance) VALUES (%s,%s,0)",(request.form['username'],request.form['password']))
+   c.commit();cur.close();c.close()
    return redirect('/login')
   except:
-   c.close();flash("Exists")
+   c.rollback();cur.close();c.close();flash("Exists")
  return render_template("register.html")
 @app.get("/logout")
 def logout():
@@ -66,31 +73,48 @@ def logout():
 @login_required
 def generate():
  d=request.form['duration'];p=request.form['product_id']
- c=get_db();u=c.execute("SELECT * FROM users WHERE id=?",(session['user_id'],)).fetchone()
+ c=get_db();cur=c.cursor()
+ cur.execute("SELECT * FROM users WHERE id=%s",(session['user_id'],))
+ u=cur.fetchone()
  price=SELL_PRICE.get(d,0)
  if not u['is_admin'] and u['balance']<price:
-  c.close();return jsonify({"error":f"Balance low {u['balance']}"}),400
+  cur.close();c.close();return jsonify({"error":f"Balance low {u['balance']}"}),400
  key=f"{PRODUCTS[p]['name']} {d} - {''.join(random.choices(string.ascii_uppercase+string.digits,k=12))}"
- if not u['is_admin']: c.execute("UPDATE users SET balance=balance-? WHERE id=?",(price,u['id']))
- c.execute("INSERT INTO history (user_id,product_name,duration,price,key_text,created_at) VALUES (?,?,?,?,?,?)",(u['id'],PRODUCTS[p]['name'],d,price,key,datetime.now().strftime("%d-%m %H:%M")))
- c.commit();nb=c.execute("SELECT balance FROM users WHERE id=?",(u['id'],)).fetchone()['balance'];c.close()
+ if not u['is_admin']: cur.execute("UPDATE users SET balance=balance-%s WHERE id=%s",(price,u['id']))
+ cur.execute("INSERT INTO history (user_id,product_name,duration,price,key_text,created_at) VALUES (%s,%s,%s,%s,%s,%s)",(u['id'],PRODUCTS[p]['name'],d,price,key,datetime.now().strftime("%d-%m %H:%M")))
+ c.commit()
+ cur.execute("SELECT balance FROM users WHERE id=%s",(u['id'],))
+ nb=cur.fetchone()['balance']
+ cur.close();c.close()
  return jsonify({"key":key,"price":price,"new_balance":nb})
 @app.get("/admin")
 def admin_panel():
  if not session.get('is_admin'): return "Admin only",403
- c=get_db();us=c.execute("SELECT * FROM users").fetchall();hs=c.execute("SELECT h.*,u.username FROM history h LEFT JOIN users u ON h.user_id=u.id ORDER BY h.id DESC LIMIT 100").fetchall();c.close()
+ c=get_db();cur=c.cursor()
+ cur.execute("SELECT * FROM users")
+ us=cur.fetchall()
+ cur.execute("SELECT h.*,u.username FROM history h LEFT JOIN users u ON h.user_id=u.id ORDER BY h.id DESC LIMIT 100")
+ hs=cur.fetchall()
+ cur.close();c.close()
  return render_template("admin.html",users=us,histories=hs)
 @app.post("/admin/add_balance")
 def add_balance():
- c=get_db();c.execute("UPDATE users SET balance=balance+? WHERE username=?",(float(request.form['amount']),request.form['username']));c.commit();c.close()
+ c=get_db();cur=c.cursor()
+ cur.execute("UPDATE users SET balance=balance+%s WHERE username=%s",(float(request.form['amount']),request.form['username']))
+ c.commit();cur.close();c.close()
  return redirect('/admin')
 @app.post("/admin/delete_user")
 def delete_user():
- c=get_db();c.execute("DELETE FROM users WHERE username=?",(request.form['username'],));c.commit();c.close()
+ c=get_db();cur=c.cursor()
+ cur.execute("DELETE FROM users WHERE username=%s",(request.form['username'],))
+ c.commit();cur.close();c.close()
  return redirect('/admin')
 @app.post("/admin/add_user")
 def add_user():
- c=get_db()
- try:c.execute("INSERT INTO users (username,password,balance) VALUES (?,?,0)",(request.form['username'],request.form['password']));c.commit()
- except:pass
- c.close();return redirect('/admin')
+ c=get_db();cur=c.cursor()
+ try:
+  cur.execute("INSERT INTO users (username,password,balance) VALUES (%s,%s,0)",(request.form['username'],request.form['password']))
+  c.commit()
+ except:
+  c.rollback()
+ cur.close();c.close();return redirect('/admin')
