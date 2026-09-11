@@ -1,62 +1,79 @@
-from flask import Flask, render_template, request, jsonify
-import os, requests
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import os, sqlite3
+from functools import wraps
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = "saksham-672-secret"
 
-# Put the NEW rotated credentials in environment variables.
-API_URL = os.getenv("RESELLER_API_URL", "https://bantibhaiya.com/api/reseller_v1.php")
-API_KEY = os.getenv("RESELLER_API_KEY", "")
-MASTER_KEY = os.getenv("RESELLER_MASTER_KEY", "")
+SELL_PRICE = {"1 Hours": 16, "3 Hours": 35, "6 Hours": 65, "12 Hours": 120}
+PRODUCTS = {"133": {"name": "AIM HACK"}, "149": {"name": "XRAG HACK"}}
+DURATIONS = ["1 Hours", "3 Hours", "6 Hours", "12 Hours"]
+DB = "users.db"
 
-PRODUCTS = {
-    "133": {"name": "AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC"},
-    "149": {"name": "XRAG FF ROOT+NONROOT+IOS IPHONE+PC"},
-}
+def get_db():
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-DURATIONS = ["1 Hours", "3 Hours", "6 Hours", "12 Hours", "1 Day", "3 Days", "7 Days"]
+def init_db():
+    conn = get_db()
+    conn.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT, balance REAL DEFAULT 0, is_admin INTEGER DEFAULT 0)")
+    conn.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY, user_id INTEGER, product_name TEXT, duration TEXT, price REAL, key_text TEXT, created_at TEXT)")
+    if not conn.execute("SELECT * FROM users WHERE username='admin'").fetchone():
+        conn.execute("INSERT INTO users (username,password,balance,is_admin) VALUES (?,?,?,?)", ("admin", generate_password_hash("admin123"), 999999, 1))
+    conn.commit()
+    conn.close()
+init_db()
+
+def login_required(f):
+    @wraps(f)
+    def dec(*args, **kwargs):
+        if 'user_id' not in session: return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return dec
 
 @app.get("/")
+@login_required
 def home():
-    return render_template("index.html", products=PRODUCTS, durations=DURATIONS)
+    conn=get_db()
+    user=conn.execute("SELECT * FROM users WHERE id=?", (session['user_id'],)).fetchone()
+    conn.close()
+    return render_template("index.html", products=PRODUCTS, durations=DURATIONS, user=user, sell_price=SELL_PRICE)
 
-@app.post("/buy")
-def buy():
-    data = request.get_json(silent=True) or {}
-    pid = str(data.get("product_id", ""))
-    duration = data.get("duration", "")
-    android_id = data.get("android_id", "").strip()
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if request.method=="POST":
+        u=request.form['username']; p=request.form['password']
+        conn=get_db(); user=conn.execute("SELECT * FROM users WHERE username=?",(u,)).fetchone(); conn.close()
+        if user and check_password_hash(user['password'], p):
+            session['user_id']=user['id']; session['username']=user['username']; session['is_admin']=bool(user['is_admin'])
+            return redirect(url_for('home'))
+        flash("Wrong password")
+    return render_template("login.html")
 
-    if pid not in PRODUCTS:
-        return jsonify(ok=False, error="Invalid product."), 400
-    if duration not in DURATIONS:
-        return jsonify(ok=False, error="Invalid duration."), 400
-    if not API_KEY or not MASTER_KEY:
-        return jsonify(ok=False, error="API credentials are not configured on the server."), 500
+@app.get("/logout")
+def logout():
+    session.clear(); return redirect(url_for('login'))
 
-    payload = {
-        "api_key": API_KEY,
-        "action": "buy",
-        "product_id": pid,
-        "duration": duration,
-    }
-    if android_id:
-        payload["android_id"] = android_id
+@app.post("/generate")
+@login_required
+def generate():
+    import random, string
+    product_id=request.form['product_id']; duration=request.form['duration']
+    conn=get_db(); user=conn.execute("SELECT * FROM users WHERE id=?",(session['user_id'],)).fetchone()
+    price=SELL_PRICE.get(duration,0)
+    if user['balance'] < price and not user['is_admin']:
+        conn.close(); return jsonify({"error": f"Balance khatam! Need {price}, you have {user['balance']}"}), 400
+    key = f"{duration}-KEY-{( ''.join(random.choices(string.ascii_uppercase+string.digits,k=8)))}"
+    if not user['is_admin']:
+        conn.execute("UPDATE users SET balance=balance-? WHERE id=?", (price, user['id']))
+    conn.execute("INSERT INTO history (user_id,product_name,duration,price,key_text,created_at) VALUES (?,?,?,?,?,?)", (user['id'], PRODUCTS[product_id]['name'], duration, price, key, datetime.now().strftime("%d-%m %H:%M")))
+    conn.commit(); conn.close()
+    return jsonify({"key": key, "price": price})
 
-    try:
-        r = requests.post(
-            API_URL,
-            data=payload,
-            headers={"Content-Type": "application/x-www-form-urlencoded",
-                     "x-master-key": MASTER_KEY},
-            timeout=20,
-        )
-        try:
-            result = r.json()
-        except ValueError:
-            result = {"raw": r.text}
-        return jsonify(ok=r.ok, status=r.status_code, response=result), r.status_code
-    except requests.RequestException as e:
-        return jsonify(ok=False, error="Reseller API connection failed."), 502
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
+@app.get("/admin")
+def admin_panel():
+    if not session.get('is_admin'): return "Admin only - login as admin", 403
+    conn=get_db();
