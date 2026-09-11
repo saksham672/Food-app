@@ -82,14 +82,20 @@ def admin_panel():
  return render_template("admin.html",users=us,histories=hs)
 @app.post("/admin/add_balance")
 def add_balance():
- c=get_db();c.execute("UPDATE users SET balance=balance+? WHERE username=?",(float(request.form['amount']),request.form['username']));c.commit();c.close()
+ if not session.get('is_admin'): return "Admin only",403
+ try:amt=float(request.form['amount'])
+ except:flash("Invalid amount");return redirect('/admin')
+ c=get_db();c.execute("UPDATE users SET balance=balance+? WHERE username=?",(amt,request.form['username']));c.commit();c.close()
+ flash(f"Added {amt} Rs to {request.form['username']}")
  return redirect('/admin')
 @app.post("/admin/delete_user")
 def delete_user():
- c=get_db();c.execute("DELETE FROM users WHERE username=?",(request.form['username'],));c.commit();c.close()
+ if not session.get('is_admin'): return "Admin only",403
+ c=get_db();c.execute("DELETE FROM users WHERE username=? AND is_admin=0",(request.form['username'],));c.commit();c.close()
  return redirect('/admin')
 @app.post("/admin/add_user")
 def add_user():
+ if not session.get('is_admin'): return "Admin only",403
  c=get_db()
  try:c.execute("INSERT INTO users (username,password,balance) VALUES (?,?,0)",(request.form['username'],request.form['password']));c.commit()
  except:pass
