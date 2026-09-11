@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-import os, sqlite3
+        from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import os, sqlite3, random, string
 from functools import wraps
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -10,7 +10,7 @@ app.secret_key = "saksham-672-secret"
 SELL_PRICE = {"1 Hours": 16, "3 Hours": 35, "6 Hours": 65, "12 Hours": 120}
 PRODUCTS = {"133": {"name": "AIM HACK"}, "149": {"name": "XRAG HACK"}}
 DURATIONS = ["1 Hours", "3 Hours", "6 Hours", "12 Hours"]
-DB = "users.db"
+DB = "/tmp/users.db"
 
 def get_db():
     conn = sqlite3.connect(DB)
@@ -60,7 +60,6 @@ def logout():
 @app.post("/generate")
 @login_required
 def generate():
-    import random, string
     product_id=request.form['product_id']; duration=request.form['duration']
     conn=get_db(); user=conn.execute("SELECT * FROM users WHERE id=?",(session['user_id'],)).fetchone()
     price=SELL_PRICE.get(duration,0)
@@ -76,4 +75,35 @@ def generate():
 @app.get("/admin")
 def admin_panel():
     if not session.get('is_admin'): return "Admin only - login as admin", 403
-    conn=get_db();
+    conn=get_db()
+    users=conn.execute("SELECT * FROM users").fetchall()
+    history=conn.execute("SELECT h.*, u.username FROM history h LEFT JOIN users u ON h.user_id=u.id ORDER BY h.id DESC LIMIT 100").fetchall()
+    conn.close()
+    return render_template("admin.html", users=users, histories=history)
+
+@app.post("/admin/add_user")
+def add_user():
+    if not session.get('is_admin'): return "Admin only", 403
+    conn=get_db()
+    try:
+        conn.execute("INSERT INTO users (username,password,balance,is_admin) VALUES (?,?,?,?)", (request.form['username'], generate_password_hash(request.form['password']), 0, 0))
+        conn.commit()
+    except: pass
+    conn.close()
+    return redirect("/admin")
+
+@app.post("/admin/add_balance")
+def add_balance():
+    if not session.get('is_admin'): return "Admin only", 403
+    conn=get_db()
+    conn.execute("UPDATE users SET balance=balance+? WHERE username=?", (float(request.form['amount']), request.form['username']))
+    conn.commit(); conn.close()
+    return redirect("/admin")
+
+@app.post("/admin/delete_user")
+def delete_user():
+    if not session.get('is_admin'): return "Admin only", 403
+    conn=get_db()
+    conn.execute("DELETE FROM users WHERE username=?", (request.form['username'],))
+    conn.commit(); conn.close()
+    return redirect("/admin")
