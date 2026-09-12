@@ -13,7 +13,10 @@ h1{text-align:center;color:#5cf3ff;text-shadow:0 0 15px #00e5ff;margin:35px 0 5p
 .card p{font-size:12px;color:#7a8a98;margin:0 0 12px}
 select,input{width:100%;padding:14px;background:#0a1218;border:1px solid #1e3442;border-radius:12px;color:#fff;margin-bottom:12px;box-sizing:border-box}
 .buy{width:100%;padding:15px;background:#00ff9d;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer}
-#box{display:none;margin:15px;padding:15px;background:#0f1d24;border-radius:12px;border:1px solid #00ff9d;text-align:center;word-break:break-all}
+#box{display:none;margin:15px;padding:20px;background:#0f1d24;border-radius:12px;border:1px solid #00ff9d;text-align:center;word-break:break-all}
+.key-text{font-size:22px;font-weight:bold;color:#00ff9d;letter-spacing:1px;margin:15px 0;display:block}
+.copy-btn{padding:12px 25px;background:#fff;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px}
+.copy-btn:active{transform:scale(0.95)}
 </style>
 </head>
 <body>
@@ -25,8 +28,8 @@ select,input{width:100%;padding:14px;background:#0a1218;border:1px solid #1e3442
 <h2>AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC</h2>
 <p>Select your required duration</p>
 <select id="d1"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>12 Hours</option><option>1 Day</option><option>3 Days</option><option>7 Days</option></select>
-<input placeholder="Android ID (only if required)">
-<button class="buy" onclick="buy('133','d1',this)">BUY NOW</button>
+<input id="aid1" placeholder="Android ID (only if required)">
+<button class="buy" onclick="buy('133','d1','aid1',this)">BUY NOW</button>
 </div>
 
 <div class="card">
@@ -34,23 +37,38 @@ select,input{width:100%;padding:14px;background:#0a1218;border:1px solid #1e3442
 <h2>XRAG FF ROOT+NONROOT+IOS IPHONE+PC</h2>
 <p>Select your required duration</p>
 <select id="d2"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>12 Hours</option><option>1 Day</option><option>3 Days</option><option>7 Days</option></select>
-<input placeholder="Android ID (only if required)">
-<button class="buy" onclick="buy('149','d2',this)">BUY NOW</button>
+<input id="aid2" placeholder="Android ID (only if required)">
+<button class="buy" onclick="buy('149','d2','aid2',this)">BUY NOW</button>
 </div>
 
 <div id="box"></div>
 
 <script>
-async function buy(pid,did,btn){
+async function buy(pid,did,aid,btn){
 let dur=document.getElementById(did).value;
+let androidId=document.getElementById(aid).value;
 let old=btn.innerText;
 btn.innerText="Processing...";
-let r=await fetch('/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:pid,duration:dur})});
+btn.disabled=true;
+try{
+let r=await fetch('/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:pid,duration:dur,android_id:androidId})});
 let j=await r.json();
-btn.innerText=old;
 let b=document.getElementById('box');
 b.style.display='block';
-if(j.ok){b.innerHTML="✅ KEY:<br><br><b style='font-size:20px'>"+j.key+"</b>"}else{b.innerHTML="❌ "+j.error}
+if(j.ok){
+b.innerHTML=`✅ KEY GENERATED:<br><span class="key-text" id="keyVal">${j.key}</span><button class="copy-btn" onclick="copyKey()">📋 COPY KEY</button><div id="copyMsg" style="margin-top:10px;color:#8a9aa8;font-size:12px"></div>`;
+window.scrollTo(0, document.body.scrollHeight);
+}else{b.innerHTML="❌ "+(j.error||'Error')}
+}catch(e){document.getElementById('box').style.display='block';document.getElementById('box').innerHTML="❌ Network Error"}
+btn.innerText=old;
+btn.disabled=false;
+}
+function copyKey(){
+let t=document.getElementById('keyVal').innerText;
+navigator.clipboard.writeText(t).then(()=>{
+document.getElementById('copyMsg').innerText="✅ Copied! Ab paste kar sakte ho";
+setTimeout(()=>{document.getElementById('copyMsg').innerText=""},2000);
+});
 }
 </script>
 </body>
