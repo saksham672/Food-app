@@ -1,31 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import os, requests
 
 app = Flask(__name__)
 
-API_URL = "https://bantibhaiya.com/api/reseller_v1.php"
+API_URL = "https://banti2haiyo.com/api/reseller_v1.php"
 API_KEY = os.getenv("RESELLER_API_KEY")
 MASTER_KEY = os.getenv("RESELLER_MASTER_KEY")
 
 @app.route("/")
 def home():
-    return """
-    <h1>Panel Working ✅</h1>
-    <form method="POST" action="/buy" id="f">
-    Product ID: <input name="product_id" value="133"><br>
-    Duration: <input name="duration" value="1 Day"><br>
-    <button type="submit">Generate Key</button>
-    </form>
-    <script>
-    document.getElementById('f').onsubmit=async(e)=>{
-        e.preventDefault();
-        let fd=new FormData(e.target);
-        let res=await fetch('/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:fd.get('product_id'),duration:fd.get('duration')})});
-        let j=await res.json();
-        alert(JSON.stringify(j));
-    }
-    </script>
-    """
+    return render_template("index.html")
 
 @app.route("/buy", methods=["POST"])
 def buy():
