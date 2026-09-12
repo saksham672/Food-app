@@ -4,11 +4,54 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SAKSHAM STORE</title>
 <style>
-body{margin:0;background:#080f14;color:#fff;font-family:sans-serif}
+body{margin:0;background:#080f14;color:#fff;font-family:Arial}
 h1{text-align:center;color:#5cf3ff;text-shadow:0 0 15px #00e5ff;margin:35px 0 5px;font-size:28px}
 .sub{text-align:center;color:#8a9aa8;font-size:13px;margin-bottom:20px}
 .card{background:#0f1d24;border:1px solid #14313f;border-radius:20px;padding:20px;margin:15px}
 .badge{background:#0f2e1f;color:#00ff8a;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:bold}
-select,input{width:100%;padding:14px;background:#0a1218;border:1px solid #1e3442;border-radius:12px;color:#fff;margin-bottom:12px}
-.buy{width:100%;padding:15px;background:#00ff9d;border:none;border-radius:12px;font-weight:bold;cursor:pointer}
-#box{display:none;margin:15px;padding:15px;background:#0f1d24;border-radius:12px;border:1px solid #00ff9
+.card h2{font-size:15px;margin:15px 0 5px}
+.card p{font-size:12px;color:#7a8a98;margin:0 0 12px}
+select,input{width:100%;padding:14px;background:#0a1218;border:1px solid #1e3442;border-radius:12px;color:#fff;margin-bottom:12px;box-sizing:border-box}
+.buy{width:100%;padding:15px;background:#00ff9d;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer}
+#box{display:none;margin:15px;padding:15px;background:#0f1d24;border-radius:12px;border:1px solid #00ff9d;text-align:center;word-break:break-all}
+</style>
+</head>
+<body>
+<h1>SAKSHAM STORE</h1>
+<div class="sub">Fast - Secure - Digital Delivery</div>
+
+<div class="card">
+<span class="badge">PID 133</span>
+<h2>AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC</h2>
+<p>Select your required duration</p>
+<select id="d1"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>12 Hours</option><option>1 Day</option><option>3 Days</option><option>7 Days</option></select>
+<input placeholder="Android ID (only if required)">
+<button class="buy" onclick="buy('133','d1',this)">BUY NOW</button>
+</div>
+
+<div class="card">
+<span class="badge">PID 149</span>
+<h2>XRAG FF ROOT+NONROOT+IOS IPHONE+PC</h2>
+<p>Select your required duration</p>
+<select id="d2"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>12 Hours</option><option>1 Day</option><option>3 Days</option><option>7 Days</option></select>
+<input placeholder="Android ID (only if required)">
+<button class="buy" onclick="buy('149','d2',this)">BUY NOW</button>
+</div>
+
+<div id="box"></div>
+
+<script>
+async function buy(pid,did,btn){
+let dur=document.getElementById(did).value;
+let old=btn.innerText;
+btn.innerText="Processing...";
+let r=await fetch('/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:pid,duration:dur})});
+let j=await r.json();
+btn.innerText=old;
+let b=document.getElementById('box');
+b.style.display='block';
+if(j.ok){b.innerHTML="✅ KEY:<br><br><b style='font-size:20px'>"+j.key+"</b>"}else{b.innerHTML="❌ "+j.error}
+}
+</script>
+</body>
+</html>
