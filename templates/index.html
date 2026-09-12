@@ -1,3 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SAKSHAM STORE</title>
+<style>
+body{margin:0;background:#080f14;color:#fff;font-family:Arial}
+h1{text-align:center;color:#5cf3ff;text-shadow:0 0 15px #00e5ff;margin:35px 0 5px;font-size:28px}
+.sub{text-align:center;color:#8a9aa8;font-size:13px;margin-bottom:20px}
+.card{background:#0f1d24;border:1px solid #14313f;border-radius:20px;padding:20px;margin:15px}
+.badge{background:#0f2e1f;color:#00ff8a;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:bold}
+.card h2{font-size:15px;margin:15px 0 5px}
+.card p{font-size:12px;color:#7a8a98;margin:0 0 12px}
+select,input{width:100%;padding:14px;background:#0a1218;border:1px solid #1e3442;border-radius:12px;color:#fff;margin-bottom:12px;box-sizing:border-box}
+.buy{width:100%;padding:15px;background:#00ff9d;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer}
+#box{display:none;margin:15px;padding:20px;background:#0f1d24;border-radius:12px;border:1px solid #00ff9d;text-align:center}
+.key-text{font-size:22px;font-weight:bold;color:#00ff9d;margin:15px 0;display:block}
+.copy-btn{padding:12px 25px;background:#fff;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>SAKSHAM STORE</h1>
+<div class="sub">Fast - Secure - Digital Delivery</div>
+
+<div class="card">
+<span class="badge">PID 133</span>
+<h2>AIM HACK FF ROOT+NONROOT+IOS IPHONE+PC</h2>
+<p>Select your required duration</p>
+<select id="d1"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>12 Hours</option><option>1 Day</option><option>3 Days</option><option>7 Days</option></select>
+<input id="aid1" placeholder="Android ID (only if required)">
+<button class="buy" onclick="buy('133','d1','aid1',this)">BUY NOW</button>
+</div>
+
+<div class="card">
+<span class="badge">PID 149</span>
+<h2>XRAG FF ROOT+NONROOT+IOS IPHONE+PC</h2>
+<p>Select your required duration</p>
+<select id="d2"><option>1 Hour</option><option>3 Hours</option><option>6 Hours</option><option>12 Hours</option><option>1 Day</option><option>3 Days</option><option>7 Days</option></select>
+<input id="aid2" placeholder="Android ID (only if required)">
+<button class="buy" onclick="buy('149','d2','aid2',this)">BUY NOW</button>
+</div>
+
 <div class="card">
 <span class="badge">PID 150</span>
 <h2>DRIP WIRE XODS</h2>
@@ -6,3 +48,27 @@
 <input id="aid3" placeholder="Android ID (only if required)">
 <button class="buy" onclick="buy('150','d3','aid3',this)">BUY NOW</button>
 </div>
+
+<div id="box"></div>
+<script>
+async function buy(pid, did, aid, btn){
+let dur=document.getElementById(did).value;
+let aid_val=document.getElementById(aid).value;
+btn.innerText="PROCESSING...";
+let fd=new FormData();
+fd.append("pid",pid);fd.append("duration",dur);fd.append("aid",aid_val);
+try{
+let r=await fetch("/buy",{method:"POST",body:fd});
+let j=await r.json();
+let box=document.getElementById("box");
+if(j.status=="success"){
+box.style.display="block";
+box.innerHTML=`<h3 style="color:#00ff9d">SUCCESS</h3><span class="key-text">${j.key}</span><br><button class="copy-btn" onclick="navigator.clipboard.writeText('${j.key}')">COPY KEY</button>`;
+box.scrollIntoView({behavior:"smooth"});
+}else{alert(j.message||"Failed");}
+}catch(e){alert("Server Error");}
+btn.innerText="BUY NOW";
+}
+</script>
+</body>
+</html>
